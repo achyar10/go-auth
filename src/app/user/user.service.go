@@ -12,11 +12,11 @@ import (
 
 // UserService interface
 type UserService interface {
-	CreateUser(ctx *fiber.Ctx) utility.APIResponse
-	DetailUser(ctx *fiber.Ctx) utility.APIResponse
-	ListUser(ctx *fiber.Ctx) utility.APIResponse
-	UpdateUser(ctx *fiber.Ctx) utility.APIResponse
-	DeleteUser(ctx *fiber.Ctx) utility.APIResponse
+	Create(ctx *fiber.Ctx) utility.APIResponse
+	Detail(ctx *fiber.Ctx) utility.APIResponse
+	List(ctx *fiber.Ctx) utility.APIResponse
+	Update(ctx *fiber.Ctx) utility.APIResponse
+	Delete(ctx *fiber.Ctx) utility.APIResponse
 }
 
 // UserServiceImpl adalah implementasi dari UserService
@@ -33,8 +33,33 @@ func NewUserService(db *gorm.DB) UserService {
 	}
 }
 
-// **Implementasi CreateUser**
-func (u *UserServiceImpl) CreateUser(ctx *fiber.Ctx) utility.APIResponse {
+// Implementasi ListUser
+func (u *UserServiceImpl) List(ctx *fiber.Ctx) utility.APIResponse {
+	var users []User
+
+	// Gunakan helper untuk query params
+	query := helper.ParseQueryParams(ctx)
+
+	// Tentukan field yang bisa dicari dalam tabel `users`
+	searchableFields := []string{"username", "fullname", "role"}
+
+	// Gunakan helper ApplyFiltersAndPagination
+	paginatedResult := helper.ApplyFiltersAndPagination(u.DB, &users, query, searchableFields)
+
+	// Generate metadata
+	metadata := helper.GenerateMetadata(query, paginatedResult.TotalCount, paginatedResult.PageCount)
+
+	// Response dengan metadata
+	responseData := map[string]interface{}{
+		"records":  paginatedResult.Records,
+		"metadata": metadata,
+	}
+
+	return utility.SuccessResponse(http.StatusOK, "OK", responseData)
+}
+
+// Implementasi CreateUser
+func (u *UserServiceImpl) Create(ctx *fiber.Ctx) utility.APIResponse {
 	var dto CreateUserDTO
 
 	// Parsing body request
@@ -73,8 +98,8 @@ func (u *UserServiceImpl) CreateUser(ctx *fiber.Ctx) utility.APIResponse {
 	return utility.SuccessResponse(http.StatusCreated, "User created successfully", user)
 }
 
-// **Implementasi DetailUser**
-func (u *UserServiceImpl) DetailUser(ctx *fiber.Ctx) utility.APIResponse {
+// Implementasi DetailUser
+func (u *UserServiceImpl) Detail(ctx *fiber.Ctx) utility.APIResponse {
 	id := ctx.Params("id") // Ambil ID dari URL param
 	var user User
 
@@ -89,21 +114,8 @@ func (u *UserServiceImpl) DetailUser(ctx *fiber.Ctx) utility.APIResponse {
 	return utility.SuccessResponse(http.StatusOK, "OK", user)
 }
 
-// **Implementasi ListUser**
-func (u *UserServiceImpl) ListUser(ctx *fiber.Ctx) utility.APIResponse {
-	var users []User
-	result := u.DB.Find(&users)
-
-	// Handle error database
-	if result.Error != nil {
-		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to retrieve users", []string{result.Error.Error()})
-	}
-
-	return utility.SuccessResponse(http.StatusOK, "OK", users)
-}
-
-// **Implementasi UpdateUser**
-func (u *UserServiceImpl) UpdateUser(ctx *fiber.Ctx) utility.APIResponse {
+// Implementasi UpdateUser
+func (u *UserServiceImpl) Update(ctx *fiber.Ctx) utility.APIResponse {
 	id := ctx.Params("id")
 	var user User
 
@@ -128,8 +140,8 @@ func (u *UserServiceImpl) UpdateUser(ctx *fiber.Ctx) utility.APIResponse {
 	return utility.SuccessResponse(http.StatusOK, "User updated successfully", user)
 }
 
-// **Implementasi DeleteUser**
-func (u *UserServiceImpl) DeleteUser(ctx *fiber.Ctx) utility.APIResponse {
+// Implementasi DeleteUser
+func (u *UserServiceImpl) Delete(ctx *fiber.Ctx) utility.APIResponse {
 	id := ctx.Params("id")
 	var user User
 
