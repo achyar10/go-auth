@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/achyar10/go-auth/src/helper"
+	"github.com/achyar10/go-auth/src/utility"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -11,11 +12,11 @@ import (
 
 // UserService interface
 type UserService interface {
-	CreateUser(ctx *fiber.Ctx) map[string]interface{}
-	DetailUser(ctx *fiber.Ctx) map[string]interface{}
-	ListUser(ctx *fiber.Ctx) map[string]interface{}
-	UpdateUser(ctx *fiber.Ctx) map[string]interface{}
-	DeleteUser(ctx *fiber.Ctx) map[string]interface{}
+	CreateUser(ctx *fiber.Ctx) utility.APIResponse
+	DetailUser(ctx *fiber.Ctx) utility.APIResponse
+	ListUser(ctx *fiber.Ctx) utility.APIResponse
+	UpdateUser(ctx *fiber.Ctx) utility.APIResponse
+	DeleteUser(ctx *fiber.Ctx) utility.APIResponse
 }
 
 // UserServiceImpl adalah implementasi dari UserService
@@ -33,25 +34,17 @@ func NewUserService(db *gorm.DB) UserService {
 }
 
 // **Implementasi CreateUser**
-func (u *UserServiceImpl) CreateUser(ctx *fiber.Ctx) map[string]interface{} {
+func (u *UserServiceImpl) CreateUser(ctx *fiber.Ctx) utility.APIResponse {
 	var dto CreateUserDTO
 
 	// Parsing body request
 	if err := ctx.BodyParser(&dto); err != nil {
-		return fiber.Map{
-			"status":  http.StatusBadRequest,
-			"message": "Invalid request body",
-			"error":   []string{err.Error()},
-		}
+		return utility.ErrorResponse(http.StatusBadRequest, "Invalid request body", []string{err.Error()})
 	}
 
 	// Validasi DTO
 	if err := u.Validate.Struct(&dto); err != nil {
-		return fiber.Map{
-			"status":  http.StatusBadRequest,
-			"message": "Validation error",
-			"error":   helper.GetValidationErrors(err),
-		}
+		return utility.ErrorResponse(http.StatusBadRequest, "Validation error", helper.GetValidationErrors(err))
 	}
 
 	// Set default nilai jika tidak diberikan
@@ -74,144 +67,84 @@ func (u *UserServiceImpl) CreateUser(ctx *fiber.Ctx) map[string]interface{} {
 
 	// Simpan ke database
 	if err := u.DB.Create(&user).Error; err != nil {
-		return fiber.Map{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to create user",
-			"error":   []string{err.Error()},
-		}
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to create user", []string{err.Error()})
 	}
 
-	return fiber.Map{
-		"status":  http.StatusCreated,
-		"message": "User created successfully",
-		"data":    user,
-	}
+	return utility.SuccessResponse(http.StatusCreated, "User created successfully", user)
 }
 
 // **Implementasi DetailUser**
-func (u *UserServiceImpl) DetailUser(ctx *fiber.Ctx) map[string]interface{} {
+func (u *UserServiceImpl) DetailUser(ctx *fiber.Ctx) utility.APIResponse {
 	id := ctx.Params("id") // Ambil ID dari URL param
 	var user User
 
 	// Cek apakah user ada
 	if err := u.DB.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fiber.Map{
-				"status":  http.StatusNotFound,
-				"message": "Data not found",
-			}
+			return utility.ErrorResponse(http.StatusNotFound, "User not found", nil)
 		}
-		return fiber.Map{
-			"status":  http.StatusInternalServerError,
-			"message": "Internal server error",
-			"error":   []string{err.Error()},
-		}
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to retrieve user", []string{err.Error()})
 	}
 
-	return fiber.Map{
-		"status":  http.StatusOK,
-		"message": http.StatusText(http.StatusOK),
-		"data":    user,
-	}
+	return utility.SuccessResponse(http.StatusOK, "OK", user)
 }
 
 // **Implementasi ListUser**
-func (u *UserServiceImpl) ListUser(ctx *fiber.Ctx) map[string]interface{} {
+func (u *UserServiceImpl) ListUser(ctx *fiber.Ctx) utility.APIResponse {
 	var users []User
 	result := u.DB.Find(&users)
 
 	// Handle error database
 	if result.Error != nil {
-		return fiber.Map{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to retrieve users",
-			"error":   result.Error.Error(),
-		}
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to retrieve users", []string{result.Error.Error()})
 	}
 
-	return fiber.Map{
-		"status":  http.StatusOK,
-		"message": http.StatusText(http.StatusOK),
-		"data":    users,
-	}
+	return utility.SuccessResponse(http.StatusOK, "OK", users)
 }
 
 // **Implementasi UpdateUser**
-func (u *UserServiceImpl) UpdateUser(ctx *fiber.Ctx) map[string]interface{} {
+func (u *UserServiceImpl) UpdateUser(ctx *fiber.Ctx) utility.APIResponse {
 	id := ctx.Params("id")
 	var user User
 
 	// Cek apakah user ada
 	if err := u.DB.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fiber.Map{
-				"status":  http.StatusNotFound,
-				"message": "Data not found",
-			}
+			return utility.ErrorResponse(http.StatusNotFound, "User not found", nil)
 		}
-		return fiber.Map{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to retrieve user",
-			"error":   []string{err.Error()},
-		}
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to retrieve user", []string{err.Error()})
 	}
 
 	// Parsing request body
 	if err := ctx.BodyParser(&user); err != nil {
-		return fiber.Map{
-			"status":  http.StatusBadRequest,
-			"message": "Invalid request body",
-			"error":   []string{err.Error()},
-		}
+		return utility.ErrorResponse(http.StatusBadRequest, "Invalid request body", []string{err.Error()})
 	}
 
 	// Update user di database
 	if err := u.DB.Save(&user).Error; err != nil {
-		return fiber.Map{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to update user",
-			"error":   []string{err.Error()},
-		}
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to update user", []string{err.Error()})
 	}
 
-	return fiber.Map{
-		"status":  http.StatusOK,
-		"message": "User updated successfully",
-		"data":    user,
-	}
+	return utility.SuccessResponse(http.StatusOK, "User updated successfully", user)
 }
 
 // **Implementasi DeleteUser**
-func (u *UserServiceImpl) DeleteUser(ctx *fiber.Ctx) map[string]interface{} {
+func (u *UserServiceImpl) DeleteUser(ctx *fiber.Ctx) utility.APIResponse {
 	id := ctx.Params("id")
 	var user User
 
 	// Cek apakah user ada
 	if err := u.DB.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fiber.Map{
-				"status":  http.StatusNotFound,
-				"message": "User not found",
-			}
+			return utility.ErrorResponse(http.StatusNotFound, "User not found", nil)
 		}
-		return fiber.Map{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to retrieve user",
-			"error":   []string{err.Error()},
-		}
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to retrieve user", []string{err.Error()})
 	}
 
 	// Hapus user dari database
 	if err := u.DB.Delete(&user).Error; err != nil {
-		return fiber.Map{
-			"status":  http.StatusInternalServerError,
-			"message": "Failed to delete user",
-			"error":   []string{err.Error()},
-		}
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to delete user", []string{err.Error()})
 	}
 
-	return fiber.Map{
-		"status":  http.StatusOK,
-		"message": "User deleted successfully",
-	}
+	return utility.SuccessResponse(http.StatusOK, "User deleted successfully", nil)
 }

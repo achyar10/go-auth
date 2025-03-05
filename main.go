@@ -5,6 +5,7 @@ import (
 	"github.com/achyar10/go-auth/src/config"
 	"github.com/achyar10/go-auth/src/routes"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
@@ -14,6 +15,8 @@ func main() {
 
 	// Inisialisasi Fiber
 	app := fiber.New()
+
+	app.Use(helmet.New())
 
 	// Middleware Logging
 	app.Use(logger.New())
