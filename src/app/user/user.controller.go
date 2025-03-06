@@ -43,3 +43,9 @@ func (uc *UserController) DeleteUser(ctx *fiber.Ctx) error {
 	response := uc.Service.Delete(ctx)
 	return ctx.Status(response.Status).JSON(response)
 }
+
+// ResetPasswordUser menangani pembaruan kata sandi pengguna
+func (uc *UserController) ResetPasswordUser(ctx *fiber.Ctx) error {
+	response := uc.Service.ResetPassword(ctx)
+	return ctx.Status(response.Status).JSON(response)
+}

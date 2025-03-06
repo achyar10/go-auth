@@ -17,6 +17,7 @@ type UserService interface {
 	List(ctx *fiber.Ctx) utility.APIResponse
 	Update(ctx *fiber.Ctx) utility.APIResponse
 	Delete(ctx *fiber.Ctx) utility.APIResponse
+	ResetPassword(ctx *fiber.Ctx) utility.APIResponse
 }
 
 // UserServiceImpl adalah implementasi dari UserService
@@ -159,4 +160,33 @@ func (u *UserServiceImpl) Delete(ctx *fiber.Ctx) utility.APIResponse {
 	}
 
 	return utility.SuccessResponse(http.StatusOK, "User deleted successfully", nil)
+}
+
+func (u *UserServiceImpl) ResetPassword(ctx *fiber.Ctx) utility.APIResponse {
+	id := ctx.Params("id")
+	var dto ResetPasswordUserDTO
+
+	// Validasi input DTO
+	if err := u.Validate.Struct(&dto); err != nil {
+		return utility.ErrorResponse(http.StatusBadRequest, "Validation error", helper.GetValidationErrors(err))
+	}
+
+	// Cek apakah user ada
+	var user User
+	if err := u.DB.Select("id").First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return utility.ErrorResponse(http.StatusNotFound, "User not found", nil)
+		}
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to retrieve user", []string{err.Error()})
+	}
+
+	// Update password dengan hashing langsung di query
+	if err := u.DB.Model(&User{}).Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"password": helper.HashPassword(dto.NewPassword),
+		}).Error; err != nil {
+		return utility.ErrorResponse(http.StatusInternalServerError, "Failed to reset password", []string{err.Error()})
+	}
+
+	return utility.SuccessResponse(http.StatusOK, "Password reset successfully", nil)
 }

@@ -23,4 +23,5 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	userRoutes.Get("/:id", userController.DetailUser)
 	userRoutes.Put("/:id", userController.UpdateUser)
 	userRoutes.Delete("/:id", userController.DeleteUser)
+	userRoutes.Patch("/:id/rpw", userController.ResetPasswordUser)
 }

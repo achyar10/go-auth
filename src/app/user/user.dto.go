@@ -14,3 +14,8 @@ type ListUserQueryDTO struct {
 	SortBy string `json:"sort_by"`
 	Order  string `json:"order"`
 }
+
+type ResetPasswordUserDTO struct {
+	OldPassword string `json:"old_password" validate:"required,min=8"`
+	NewPassword string `json:"new_password" validate:"required,min=8"`
+}
